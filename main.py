@@ -1,63 +1,45 @@
-#PersonalityAnalysisUsingCv
-import os
-import cv2
-import pytesseract
-import nltk
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-nltk.download('vader_lexicon')
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
+import base64
+from copyleaks.copyleaks import Copyleaks
+from copyleaks.exceptions.command_error import CommandError
+from copyleaks.models.submit.document import FileDocument
 
-def extract_text_from_cv_image(image_path):
-    image = cv2.imread(image_path)
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray_image)
-    return text
+# Replace with your Copyleaks API credentials
+EMAIL_ADDRESS = 'bhargav.thota2003@gmail.com'
+API_KEY = '2d00ed27-53ce-48e9-91bc-060a272af021'
 
-def perform_sentiment_analysis(text):
-    sid = SentimentIntensityAnalyzer()
-    sentiment_scores = sid.polarity_scores(text)
-    return sentiment_scores
+# Authenticate with Copyleaks API
+try:
+    auth_token = Copyleaks.login(EMAIL_ADDRESS, API_KEY)
+except CommandError as ce:
+    response = ce.get_response()
+    print(f"An error occurred (HTTP status code {response.status_code}):")
+    print(response.content)
+    exit(1)
 
-def personality_analysis(sentiment_scores):
-    compound_score = sentiment_scores["compound"]
-    positive_score = sentiment_scores["pos"]
-    negative_score = sentiment_scores["neg"]
-    personality_traits = []
-    if compound_score >= 0.05:
-        personality_traits.append("Positive")
-    elif compound_score <= -0.05:
-        personality_traits.append("Negative")
-    else:
-        personality_traits.append("Neutral")
+print("Logged in successfully!\nToken:")
+print(auth_token)
 
-    if positive_score > negative_score:
-        personality_traits.append("Optimistic")
-    elif positive_score < negative_score:
-        personality_traits.append("Pessimistic")
+def submit_document_for_plagiarism_check(auth_token,file_path):
 
-    return personality_traits
-
-def main():
-    image_filename = input("Enter the name of the CV image file (e.g., cv1.jpg): ")
-
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    image_path = os.path.join(script_directory, image_filename)
+    scan_id = 12345  # Set a unique scan ID
 
     try:
-        
-        extracted_text = extract_text_from_cv_image(image_path)
+        with open(file_path, 'rb') as file:
+            file_content_base64 = base64.b64encode(file.read()).decode('utf-8')
+            file_submission = FileDocument(file_content_base64, file.name)
 
-        sentiment_scores = perform_sentiment_analysis(extracted_text)
-
-        personality_traits = personality_analysis(sentiment_scores)
-
-        print("\nPersonality Traits:")
-        for trait in personality_traits:
-            print(trait)
+        Copyleaks.submit_file(auth_token, scan_id, file_submission)
+        print("File submitted for plagiarism check.")
+        print("You will be notified once the scan is completed.")
+    except CommandError as ce:
+        response = ce.get_response()
+        print(f"An error occurred (HTTP status code {response.status_code}):")
+        print(response.content)
     except FileNotFoundError:
-        print(f"Error: The image file '{image_filename}' was not found in the script directory.")
+        print("File not found.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
-if __name__ == "__main__":
-    main()
+# Example usage
+file_path = input("Enter the file path: ")
+submit_document_for_plagiarism_check(auth_token, file_path)
