@@ -1,3 +1,4 @@
+#plagarismChecker using copyleaks api and key
 import base64
 from copyleaks.copyleaks import Copyleaks
 from copyleaks.exceptions.command_error import CommandError
